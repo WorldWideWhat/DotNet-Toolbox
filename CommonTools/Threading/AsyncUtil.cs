@@ -1,5 +1,9 @@
 ﻿namespace worldwidewhat.CommonTools.Threading
 {
+    /// <summary>
+    /// Asyn Utils
+    /// Created: 2022-02-12
+    /// </summary>
     public static class AsyncUtil
     {
         private static readonly TaskFactory _taskFactory = new TaskFactory(

@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO.Ports;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.IO.Ports;
 
+/// <summary>
+/// Extension of the Serialport class object.
+/// Created : 2022-02-12
+/// </summary>
 public static partial class SerialExtension
 {
     private static readonly SemaphoreSlim semaphore = new(1);

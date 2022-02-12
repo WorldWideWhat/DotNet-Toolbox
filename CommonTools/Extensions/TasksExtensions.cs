@@ -1,5 +1,17 @@
-﻿public static partial class TasksExtensions
+﻿/// <summary>
+/// Extension of existing Task functions
+/// Created: 2022-02-12
+/// </summary>
+public static partial class TasksExtensions
 {
+    /// <summary>
+    /// Extens task with a timeout function
+    /// </summary>
+    /// <typeparam name="T">Object type</typeparam>
+    /// <param name="task">Task</param>
+    /// <param name="time">Timeout time</param>
+    /// <returns>Task</returns>
+    /// <exception cref="System.OperationCanceledException"></exception>
     public static async Task<T> Timeout<T>(this Task<T> task, int time)
     {
         var cts = new CancellationTokenSource(time);

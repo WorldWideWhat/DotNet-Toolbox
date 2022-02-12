@@ -1,5 +1,9 @@
 ﻿namespace worldwidewhat.CommonTools.Files
 {
+    /// <summary>
+    /// Directory handling functions
+    /// Created: 2022-02-12
+    /// </summary>
     public static class DirectoryHandler
     {
         /// <summary>

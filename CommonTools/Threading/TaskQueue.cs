@@ -1,12 +1,16 @@
 ﻿namespace worldwidewhat.CommonTools.Threading
 {
+    /// <summary>
+    /// TaskQueue class
+    /// Created: 2022-02-12
+    /// </summary>
     public class TaskQueue : ITaskQueue
     {
         /// <summary> Previous task object </summary>
         private Task _previous = Task.FromResult(false);
 
         /// <summary> Lock key object </summary>
-        private readonly object _key = new object();
+        private readonly object _key = new();
 
         /// <summary> Add task element to queue with return value </summary>
         /// <param name="task">Function/task to run</param>
