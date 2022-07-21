@@ -2,6 +2,8 @@
 /// Extension of existing Task functions
 /// Created: 2022-02-12
 /// </summary>
+
+namespace worldwidewhat.CommonTools.Extensions;
 public static partial class TasksExtensions
 {
     /// <summary>

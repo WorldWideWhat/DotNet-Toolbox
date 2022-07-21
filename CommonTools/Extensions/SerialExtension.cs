@@ -1,9 +1,13 @@
 ﻿using System.IO.Ports;
+using worldwidewhat.CommonTools.Threading;
 
 /// <summary>
 /// Extension of the Serialport class object.
 /// Created : 2022-02-12
 /// </summary>
+
+namespace worldwidewhat.CommonTools.Extensions;
+
 public static partial class SerialExtension
 {
     private static readonly SemaphoreSlim semaphore = new(1);
@@ -11,15 +15,15 @@ public static partial class SerialExtension
     /// <summary> Flush serial port async</summary>
     /// <param name="token">Optional cancel token</param>
     /// <returns>Success</returns>
-    public static async Task<int> FlushAsync(this SerialPort @this, CancellationToken cancellationToken = default)
+    public static async Task<int> FlushAsync(this SerialPort port, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested) return -1;
         await semaphore.WaitAsync(cancellationToken);
         if (cancellationToken.IsCancellationRequested) return -1;
-        @this.DiscardInBuffer();
-        @this.DiscardOutBuffer();
+        port.DiscardInBuffer();
+        port.DiscardOutBuffer();
 
-        await @this.BaseStream.FlushAsync(cancellationToken);
+        await port.BaseStream.FlushAsync(cancellationToken);
         if (cancellationToken.IsCancellationRequested) return -1;
         semaphore.Release();
         return 0;
@@ -28,9 +32,9 @@ public static partial class SerialExtension
     /// <summary> Flush serial port </summary>
     /// <param name="token">Optional cancel token</param>
     /// <returns>Success</returns>
-    public static int Flush(this SerialPort @this, CancellationToken cancellationToken=default)
+    public static int Flush(this SerialPort port, CancellationToken cancellationToken=default)
     {
-        return worldwidewhat.CommonTools.Threading.AsyncUtil.RunSync<int>(()=>FlushAsync(@this, cancellationToken));
+        return AsyncUtil.RunSync<int>(()=>FlushAsync(port, cancellationToken));
     }
 
     /// <summary> Transmit data to the serial async </summary>
@@ -39,25 +43,24 @@ public static partial class SerialExtension
     /// <param name="length">Number of bytes to transmit</param>
     /// <param name="token">Optional cancel token</param>
     /// <returns>Success</returns>
-    public static async Task<int> TransmitAsync(this SerialPort @this, byte[] bffr, int offset, int length, CancellationToken token = default)
+    public static async Task<int> TransmitAsync(this SerialPort port, byte[] bffr, int offset, int length, CancellationToken token = default)
     {
         int n_success = -1;
 
-        if (@this == null) goto ExitTransmitAsync;
-        if (!@this.IsOpen) goto ExitTransmitAsync;
-        if (token.IsCancellationRequested) goto ExitTransmitAsync;
+        if (port == null) return n_success;
+        if (!port.IsOpen) return n_success;
+        if (token.IsCancellationRequested) return n_success;
 
-        if (await FlushAsync(@this, token) != 0) goto ExitTransmitAsync;
+        if (await FlushAsync(port, token) != 0) return n_success;
 
-        await @this.BaseStream.WriteAsync(bffr.AsMemory(offset, length), token);
-        if (token.IsCancellationRequested) goto ExitTransmitAsync;
+        await port.BaseStream.WriteAsync(bffr.AsMemory(offset, length), token);
+        if (token.IsCancellationRequested) return n_success;
 
-        await @this.BaseStream.FlushAsync(token);
-        if (token.IsCancellationRequested) goto ExitTransmitAsync;
+        await port.BaseStream.FlushAsync(token);
+        if (token.IsCancellationRequested) return n_success;
 
         n_success = 0;
-    ExitTransmitAsync:
-        return (int)n_success;
+        return n_success;
     }
 
     /// <summary> Transmit data to the serial </summary>
@@ -66,9 +69,9 @@ public static partial class SerialExtension
     /// <param name="length">Number of bytes to transmit</param>
     /// <param name="token">Optional cancel token</param>
     /// <returns>Success</returns>
-    public static int Transmit(this SerialPort @this, byte[] bffr, int offset, int length, CancellationToken token = default)
+    public static int Transmit(this SerialPort port, byte[] bffr, int offset, int length, CancellationToken token = default)
     {
-        return worldwidewhat.CommonTools.Threading.AsyncUtil.RunSync<int>(() => TransmitAsync(@this, bffr, offset, length, token));
+        return AsyncUtil.RunSync<int>(() => TransmitAsync(port, bffr, offset, length, token));
     }
 
     /// <summary> Read data from serial async </summary>
@@ -78,30 +81,26 @@ public static partial class SerialExtension
     /// <param name="timeout">Read timeout in ms</param>
     /// <param name="token">Optional Cancel token</param>
     /// <returns>Tuple[Success, number of bytes read]</returns>
-    public static async Task<(int Success, int BytesRead)> ReadAsync(this SerialPort @this, byte[] bffr, int offset, int length, int timeout, CancellationToken token = default)
+    public static async Task<(int Success, int BytesRead)> ReadAsync(this SerialPort port, byte[] bffr, int offset, int length, int timeout, CancellationToken token = default)
     {
         int n_success = -1;
         int n_read = -1;
-        if (@this == null) goto ExitReadAsync;
-        if (!@this.IsOpen) goto ExitReadAsync;
-        if (token.IsCancellationRequested) goto ExitReadAsync;
+        if (port == null) return (n_success, n_read);
+        if (!port.IsOpen) return (n_success, n_read);
+        if (token.IsCancellationRequested) return (n_success, n_read);
 
         await semaphore.WaitAsync(token);
-        if (token.IsCancellationRequested) goto ExitReadAsync;
-
         try
         {
-            n_read = await @this.BaseStream.ReadAsync(bffr, offset, length, token).Timeout(timeout);
+            if (!token.IsCancellationRequested)
+                n_read = await port.BaseStream.ReadAsync(bffr, offset, length, token).Timeout(timeout);
         }
         finally
         {
             if (!token.IsCancellationRequested)
                 n_success = 0;
+            semaphore.Release();
         }
-
-
-    ExitReadAsync:
-        semaphore.Release();
         return (n_success, n_read);
     }
 
@@ -112,8 +111,8 @@ public static partial class SerialExtension
     /// <param name="timeout">Read timeout in ms</param>
     /// <param name="token">Optional Cancel token</param>
     /// <returns>Tuple[Success, number of bytes read]</returns>        
-    public static (int Success, int BytesRead) Read(this SerialPort @this,  byte[] bffr, int offset, int length, int timeout, CancellationToken token = default)
+    public static (int Success, int BytesRead) Read(this SerialPort port,  byte[] bffr, int offset, int length, int timeout, CancellationToken token = default)
     {
-        return worldwidewhat.CommonTools.Threading.AsyncUtil.RunSync<(int, int)>(() => ReadAsync(@this, bffr, offset, length, timeout, token));
+        return AsyncUtil.RunSync<(int, int)>(() => ReadAsync(port, bffr, offset, length, timeout, token));
     }
 }
